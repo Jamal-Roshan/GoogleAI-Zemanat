@@ -1,0 +1,132 @@
+@page "/settings"
+@inject IAuthService AuthService
+@inject IBarcodeService Barcode
+@inject IJSRuntime JS
+
+<PageTitle>تنظیمات سامانه</PageTitle>
+
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white p-6 rounded-2xl border border-slate-200">
+        <h2 class="text-lg font-black text-slate-800">تنظیمات سیستمی، سربرگ‌ها و آستانه مالی</h2>
+        <p class="text-xs text-slate-500 mt-1">پیکربندی اطلاعات سازمانی، پسوند شماره دبیرخانه و حداقل دریافتی مجاز</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <div class="p-4 rounded-xl text-xs font-bold @(_isError ? "bg-rose-50 text-rose-800 border border-rose-200" : "bg-emerald-50 text-emerald-800 border border-emerald-200")">
+            @_message
+        </div>
+    }
+
+    <!-- فرم تنظیمات سازمانی -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 space-y-4">
+        <h3 class="font-bold text-sm text-slate-800 pb-2 border-b border-slate-100">اطلاعات سازمانی و سربرگ اسناد</h3>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">نام سازمان</label>
+                <input type="text" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_settings.OrgTitle" />
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">واحد متولی صدور</label>
+                <input type="text" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_settings.ManagingUnit" />
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">سمت مسئول امضاکننده</label>
+                <input type="text" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_settings.SignerName" />
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">عنوان سازمانی مسئول</label>
+                <input type="text" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_settings.SignerRole" />
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">نشانی اداره</label>
+            <input type="text" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_settings.Address" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">حداقل دریافتی مجاز برای صدور ضمانت (ریال)</label>
+                <input type="number" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_settings.MinIncomeThreshold" />
+                <span class="text-[10px] text-slate-500 mt-1 block">
+                    دریافتی کمتر از این رقم: @Barcode.FormatCurrency(_settings.MinIncomeThreshold) اجازه صدور نخواهد داشت.
+                </span>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">پسوند شماره دبیرخانه</label>
+                <input type="text" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-mono" @bind="_settings.SecretariatSuffix" />
+                <span class="text-[10px] text-slate-500 mt-1 block">
+                    شماره‌های دبیرخانه به صورت ترتیبی و با پسوند /@_settings.SecretariatSuffix ثبت می‌شوند.
+                </span>
+            </div>
+        </div>
+
+        <div class="pt-4 flex justify-end">
+            <button @onclick="SaveSettings" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-xs font-bold transition">
+                ذخیره تنظیمات
+            </button>
+        </div>
+    </div>
+
+    <!-- پاکسازی داده‌ها و ریست سیستم با تایید دو مرحله‌ای -->
+    <div class="bg-rose-50 border border-rose-200 p-6 rounded-2xl space-y-3">
+        <h3 class="font-bold text-sm text-rose-900">پاکسازی کامل داده‌ها و بازگردانی به مقادیر اولیه</h3>
+        <p class="text-xs text-rose-700 leading-relaxed">
+            این عملیات با تایید دو مرحله‌ای تمامی اسناد، اطلاعات پرسنلی و تاریخچه را حذف می‌کند و در صورت نیاز مقادیر پیش‌فرض سازمانی را مجدداً بارگذاری خواهد کرد.
+        </p>
+
+        <button @onclick="HandleSystemReset" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer">
+            حذف کلیه اطلاعات و بازگردانی تنظیمات پیش‌فرض
+        </button>
+    </div>
+</div>
+
+@code {
+    private SystemSettings _settings = new();
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = await AuthService.GetSystemSettingsAsync();
+    }
+
+    private async Task SaveSettings()
+    {
+        _message = null;
+        var ok = await AuthService.UpdateSystemSettingsAsync(_settings);
+        if (ok)
+        {
+            _isError = false;
+            _message = "تنظیمات با موفقیت ذخیره گردید.";
+        }
+        else
+        {
+            _isError = true;
+            _message = "خطا در ذخیره تنظیمات.";
+        }
+    }
+
+    private async Task HandleSystemReset()
+    {
+        bool step1 = await JS.InvokeAsync<bool>("confirm", "هشدار مرحله اول: آیا از حذف کلیه اطلاعات موجود در سامانه اطمینان دارید؟");
+        if (!step1) return;
+
+        bool step2 = await JS.InvokeAsync<bool>("confirm", "هشدار نهایی (مرحله دوم): این عملیات غیرقابل بازگشت است. آیا تایید می‌فرمایید؟");
+        if (step2)
+        {
+            await AuthService.ResetEntireSystemAsync(true);
+            _settings = await AuthService.GetSystemSettingsAsync();
+            _isError = false;
+            _message = "سیستم با موفقیت پاکسازی شد و مقادیر اولیه جایگزین گردید.";
+        }
+    }
+}

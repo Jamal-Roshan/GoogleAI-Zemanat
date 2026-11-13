@@ -1,0 +1,240 @@
+@import "tailwindcss";
+
+/* Enable class-based dark mode for Tailwind CSS v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Theme color definitions */
+:root {
+  --theme-primary: #2563eb;
+  --theme-primary-hover: #1d4ed8;
+  --theme-primary-light: #eff6ff;
+  --theme-primary-border: #bfdbfe;
+  --theme-primary-text: #1d4ed8;
+  --theme-primary-ring: rgba(37, 99, 235, 0.3);
+}
+
+:root[data-theme="emerald"] {
+  --theme-primary: #059669;
+  --theme-primary-hover: #047857;
+  --theme-primary-light: #ecfdf5;
+  --theme-primary-border: #a7f3d0;
+  --theme-primary-text: #047857;
+  --theme-primary-ring: rgba(5, 150, 105, 0.3);
+}
+
+:root[data-theme="indigo"] {
+  --theme-primary: #4f46e5;
+  --theme-primary-hover: #4338ca;
+  --theme-primary-light: #eef2ff;
+  --theme-primary-border: #c7d2fe;
+  --theme-primary-text: #4338ca;
+  --theme-primary-ring: rgba(79, 70, 229, 0.3);
+}
+
+:root[data-theme="amber"] {
+  --theme-primary: #d97706;
+  --theme-primary-hover: #b45309;
+  --theme-primary-light: #fffbeb;
+  --theme-primary-border: #fde68a;
+  --theme-primary-text: #b45309;
+  --theme-primary-ring: rgba(217, 119, 6, 0.3);
+}
+
+:root[data-theme="rose"] {
+  --theme-primary: #e11d48;
+  --theme-primary-hover: #be123c;
+  --theme-primary-light: #fff1f2;
+  --theme-primary-border: #fecdd3;
+  --theme-primary-text: #be123c;
+  --theme-primary-ring: rgba(225, 29, 72, 0.3);
+}
+
+:root[data-theme="slate"] {
+  --theme-primary: #475569;
+  --theme-primary-hover: #334155;
+  --theme-primary-light: #f8fafc;
+  --theme-primary-border: #cbd5e1;
+  --theme-primary-text: #334155;
+  --theme-primary-ring: rgba(71, 85, 105, 0.3);
+}
+
+.dark {
+  --theme-primary-light: rgba(37, 99, 235, 0.2);
+  --theme-primary-border: rgba(37, 99, 235, 0.4);
+  --theme-primary-text: #93c5fd;
+}
+.dark[data-theme="emerald"], :root[data-theme="emerald"].dark, .dark [data-theme="emerald"] {
+  --theme-primary-light: rgba(5, 150, 105, 0.2);
+  --theme-primary-border: rgba(5, 150, 105, 0.4);
+  --theme-primary-text: #6ee7b7;
+}
+.dark[data-theme="indigo"], :root[data-theme="indigo"].dark, .dark [data-theme="indigo"] {
+  --theme-primary-light: rgba(79, 70, 229, 0.2);
+  --theme-primary-border: rgba(79, 70, 229, 0.4);
+  --theme-primary-text: #a5b4fc;
+}
+.dark[data-theme="amber"], :root[data-theme="amber"].dark, .dark [data-theme="amber"] {
+  --theme-primary-light: rgba(217, 119, 6, 0.2);
+  --theme-primary-border: rgba(217, 119, 6, 0.4);
+  --theme-primary-text: #fcd34d;
+}
+.dark[data-theme="rose"], :root[data-theme="rose"].dark, .dark [data-theme="rose"] {
+  --theme-primary-light: rgba(225, 29, 72, 0.2);
+  --theme-primary-border: rgba(225, 29, 72, 0.4);
+  --theme-primary-text: #fda4af;
+}
+.dark[data-theme="slate"], :root[data-theme="slate"].dark, .dark [data-theme="slate"] {
+  --theme-primary-light: rgba(71, 85, 105, 0.25);
+  --theme-primary-border: rgba(71, 85, 105, 0.4);
+  --theme-primary-text: #cbd5e1;
+}
+
+/* Dynamic theme helper utility classes */
+.theme-btn-primary {
+  background-color: var(--theme-primary) !important;
+  color: #ffffff !important;
+}
+.theme-btn-primary:hover {
+  background-color: var(--theme-primary-hover) !important;
+}
+.theme-text {
+  color: var(--theme-primary) !important;
+}
+.dark .theme-text {
+  color: var(--theme-primary-text) !important;
+}
+.theme-bg-soft {
+  background-color: var(--theme-primary-light) !important;
+}
+.theme-border {
+  border-color: var(--theme-primary) !important;
+}
+
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/Vazir.woff2') format('woff2'),
+       url('/fonts/Vazir.woff') format('woff'),
+       url('/fonts/Vazir.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/Vazir-Medium.woff2') format('woff2'),
+       url('/fonts/Vazir-Medium.woff') format('woff'),
+       url('/fonts/Vazir-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/Vazir-Bold.woff2') format('woff2'),
+       url('/fonts/Vazir-Bold.woff') format('woff'),
+       url('/fonts/Vazir-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/Vazir-Light.woff2') format('woff2'),
+       url('/fonts/Vazir-Light.woff') format('woff'),
+       url('/fonts/Vazir-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  *, *::before, *::after {
+    font-family: 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  }
+
+  body {
+    font-family: 'Vazir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+/* Print Rules */
+@media print {
+  html, body {
+    background: white !important;
+    color: black !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-modal-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+
+  .print-modal-content {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  #printable-certificate,
+  #printable-estelam-two-piece,
+  #printable-report {
+    visibility: visible !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 5mm;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

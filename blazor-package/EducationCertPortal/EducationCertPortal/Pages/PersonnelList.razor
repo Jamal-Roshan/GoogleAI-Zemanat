@@ -1,0 +1,104 @@
+@page "/personnel"
+@inject IPersonnelService PersonnelService
+@inject IBarcodeService Barcode
+@inject IJSRuntime JS
+
+<PageTitle>مدیریت پرسنل</PageTitle>
+
+<div class="space-y-6 max-w-6xl mx-auto">
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+            <h2 class="text-lg font-black text-slate-800">بانک اطلاعاتی پرسنل و همکاران</h2>
+            <p class="text-xs text-slate-500 mt-1">مدیریت پرسنل شاغل، اطلاعات حقوقی و پاکسازی بازنشستگان بدون تعهد فعال</p>
+        </div>
+
+        <button @onclick="ShowPurgeRetiredModal" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition">
+            🧹 فیلتر و حذف بازنشستگان فاقد تعهد
+        </button>
+    </div>
+
+    <!-- جستجو -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200">
+        <input type="text" placeholder="جستجو بر اساس نام، کد پرسنلی، کد ملی یا واحد سازمانی..."
+               class="w-full p-2.5 rounded-xl border border-slate-200 text-xs"
+               @bind="_searchQuery" @bind:event="oninput" @bind:after="LoadPersonnel" />
+    </div>
+
+    <!-- جدول پرسنل -->
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+        <div class="overflow-x-auto">
+            <table class="w-full text-right text-xs">
+                <thead class="bg-slate-50 text-slate-500 border-b border-slate-200 font-bold">
+                    <tr>
+                        <th class="p-3.5">کد پرسنلی</th>
+                        <th class="p-3.5">نام و نام خانوادگی</th>
+                        <th class="p-3.5">کد ملی</th>
+                        <th class="p-3.5">حکم حقوقی</th>
+                        <th class="p-3.5">خالص دریافتی</th>
+                        <th class="p-3.5">مانده تعهدات</th>
+                        <th class="p-3.5">وضعیت</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @foreach (var p in _personnel)
+                    {
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3.5 font-bold font-mono text-slate-800">@Barcode.ToPersianDigits(p.PersonnelCode)</td>
+                            <td class="p-3.5 font-bold text-slate-900">@p.FullName</td>
+                            <td class="p-3.5 font-mono text-slate-600">@Barcode.ToPersianDigits(p.NationalCode)</td>
+                            <td class="p-3.5 font-mono">@Barcode.FormatCurrency(p.BaseSalary)</td>
+                            <td class="p-3.5 font-mono font-bold text-emerald-700">@Barcode.FormatCurrency(p.NetIncome)</td>
+                            <td class="p-3.5 font-mono font-bold text-amber-700">@Barcode.FormatCurrency(p.TotalActiveDeductions)</td>
+                            <td class="p-3.5">
+                                @if (p.Status == PersonnelStatus.Active)
+                                {
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">شاغل فعال</span>
+                                }
+                                else
+                                {
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">بازنشسته</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Personnel> _personnel = new();
+    private string _searchQuery = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPersonnel();
+    }
+
+    private async Task LoadPersonnel()
+    {
+        _personnel = await PersonnelService.GetAllPersonnelAsync(_searchQuery);
+    }
+
+    private async Task ShowPurgeRetiredModal()
+    {
+        var retired = await PersonnelService.GetDeletableRetiredPersonnelAsync();
+        if (!retired.Any())
+        {
+            await JS.InvokeVoidAsync("alert", "هیچ کاربر بازنشسته‌ای که فاقد گواهی یا تعهد فعال باشد در سامانه وجود ندارد.");
+            return;
+        }
+
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", $"تعداد {retired.Count} پرسنل بازنشسته بدون گواهی فعال شناسایی شد. آیا تمایل به حذف این رکوردها و سوابق آن‌ها از سامانه دارید؟");
+        if (confirmed)
+        {
+            foreach (var r in retired)
+            {
+                await PersonnelService.DeleteRetiredPersonnelAsync(r.Id);
+            }
+            await LoadPersonnel();
+            await JS.InvokeVoidAsync("alert", "رکوردهای بازنشسته با موفقیت از سیستم پاکسازی شدند.");
+        }
+    }
+}

@@ -1,0 +1,146 @@
+@page "/verify"
+@inject ICertificateService CertService
+@inject IBarcodeService Barcode
+@inject NavigationManager Navigation
+
+<PageTitle>استعلام و اصالت‌سنجی برخط اسناد</PageTitle>
+
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white p-6 rounded-2xl border border-slate-200">
+        <h2 class="text-lg font-black text-slate-800">سامانه اصالت‌سنجی و استعلام برخط گواهی و ضمانت‌نامه</h2>
+        <p class="text-xs text-slate-500 mt-1">تأییدیه رسمی اصالت اسناد اداری و حقوقی صادره از مدیریت آموزش و پرورش ملایر</p>
+
+        <div class="mt-4 flex gap-2">
+            <input type="text"
+                   placeholder="کد رهگیری یا شماره ثبت دبیرخانه را وارد کنید..."
+                   class="flex-1 p-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold"
+                   @bind="_searchCode"
+                   @onkeyup="HandleKeyUp" />
+            <button @onclick="PerformVerification" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition">
+                استعلام اصالت
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_message))
+        {
+            <div class="mt-3 p-3 rounded-xl text-xs font-bold @(_isError ? "bg-rose-50 text-rose-800 border border-rose-200" : "bg-emerald-50 text-emerald-800 border border-emerald-200")">
+                @_message
+            </div>
+        }
+    </div>
+
+    @if (_foundCert != null)
+    {
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 space-y-4 shadow-2xs">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center pb-4 border-b border-slate-100 gap-3">
+                <div>
+                    <span class="text-xs text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-xl">
+                        ✓ اصالت سند در سامانه رسمی تأیید شد
+                    </span>
+                    <h3 class="text-base font-black text-slate-900 mt-2">
+                        @(_foundCert.Type == CertificateType.Guarantee ? "ضمانت‌نامه بانکی" : _foundCert.Type == CertificateType.Deduction ? "گواهی کسر از حقوق" : "پاسخ استعلام بانکی")
+                    </h3>
+                </div>
+
+                <div class="text-left">
+                    <span class="text-xs text-slate-500 block">شماره دبیرخانه:</span>
+                    <strong class="text-sm font-mono text-slate-900">@Barcode.ToPersianDigits(_foundCert.CertificateNo)</strong>
+                </div>
+            </div>
+
+            <!-- مشخصات متعهد و تسهیلات -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div class="p-3 bg-slate-50 rounded-xl">
+                    <span class="text-slate-500 block">نام و نشان متعهد / ضامن:</span>
+                    <strong class="text-slate-900 block mt-1">@_foundCert.Personnel?.FullName</strong>
+                    <span class="text-[10px] text-slate-500">کد پرسنلی: @Barcode.ToPersianDigits(_foundCert.Personnel?.PersonnelCode ?? "")</span>
+                </div>
+
+                <div class="p-3 bg-slate-50 rounded-xl">
+                    <span class="text-slate-500 block">بانک عامل و شعبه:</span>
+                    <strong class="text-slate-900 block mt-1">@_foundCert.BankName</strong>
+                    <span class="text-[10px] text-slate-500">@_foundCert.BranchName</span>
+                </div>
+
+                <div class="p-3 bg-slate-50 rounded-xl">
+                    <span class="text-slate-500 block">مبلغ تسهیلات و وضعیت:</span>
+                    <strong class="text-slate-900 block mt-1">@Barcode.FormatCurrency(_foundCert.LoanAmount)</strong>
+                    <span class="text-[10px] font-bold text-emerald-700">@(_foundCert.Status == CertificateStatus.Approved ? "فعال و معتبر" : "تسویه شده")</span>
+                </div>
+            </div>
+
+            <!-- بخش بارکد و QR کد رسمی -->
+            <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <span class="text-[10px] text-slate-500 block">کد رهگیری یکتا:</span>
+                    <span class="font-mono text-xs font-black text-blue-700">@_foundCert.TrackingCode</span>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="p-1 border border-slate-200 rounded-lg bg-white">
+                        @((MarkupString)Barcode.GenerateCode128Svg(_foundCert.TrackingCode, 36, 170))
+                    </div>
+                    <div class="p-1 border border-slate-200 rounded-lg bg-white">
+                        @((MarkupString)Barcode.GenerateQrCodeSvg(Navigation.BaseUri + "verify?code=" + _foundCert.TrackingCode, 42))
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "code")]
+    public string? CodeFromUrl { get; set; }
+
+    private string _searchCode = "";
+    private Certificate? _foundCert;
+    private string? _message;
+    private bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(CodeFromUrl))
+        {
+            _searchCode = CodeFromUrl;
+            await PerformVerification();
+        }
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await PerformVerification();
+        }
+    }
+
+    private async Task PerformVerification()
+    {
+        _foundCert = null;
+        _message = null;
+        _isError = false;
+
+        if (string.IsNullOrWhiteSpace(_searchCode))
+        {
+            _message = "لطفاً کد رهگیری یا شماره ثبت را وارد فرمایید.";
+            _isError = true;
+            return;
+        }
+
+        try
+        {
+            _foundCert = await CertService.VerifyCertificateAsync(_searchCode, "local-client");
+            if (_foundCert == null)
+            {
+                _message = "سندی با مشخصات وارد شده در سامانه یافت نشد.";
+                _isError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _message = ex.Message;
+            _isError = true;
+        }
+    }
+}

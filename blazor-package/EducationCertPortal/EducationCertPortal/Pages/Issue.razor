@@ -1,0 +1,186 @@
+@page "/issue"
+@inject ICertificateService CertService
+@inject IPersonnelService PersonnelService
+@inject IBarcodeService Barcode
+@inject NavigationManager Navigation
+
+<PageTitle>صدور گواهی و ضمانت‌نامه</PageTitle>
+
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white p-6 rounded-2xl border border-slate-200">
+        <h2 class="text-lg font-black text-slate-800">فرم صدور گواهی و ضمانت‌نامه اداری</h2>
+        <p class="text-xs text-slate-500 mt-1">پسوند شماره دبیرخانه به صورت خودکار ۱۰۴ ثبت می‌گردد.</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl text-xs font-bold">
+            ⚠️ @_errorMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-xs font-bold">
+            ✅ @_successMessage
+        </div>
+    }
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 space-y-4">
+        <!-- ۱. انتخاب پرسنل متقاضی -->
+        <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">انتخاب پرسنل متقاضی / ضامن *</label>
+            <select class="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold" @onchange="OnPersonnelChanged">
+                <option value="0">-- لطفاً پرسنل را انتخاب کنید --</option>
+                @foreach (var p in _personnelList)
+                {
+                    <option value="@p.Id">@p.FullName (کد: @p.PersonnelCode - کد ملی: @p.NationalCode)</option>
+                }
+            </select>
+        </div>
+
+        @if (_selectedPersonnel != null)
+        {
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div>
+                    <span class="text-slate-500 block">حکم حقوقی:</span>
+                    <strong class="text-slate-800">@Barcode.FormatCurrency(_selectedPersonnel.BaseSalary)</strong>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">خالص دریافتی:</span>
+                    <strong class="text-emerald-700">@Barcode.FormatCurrency(_selectedPersonnel.NetIncome)</strong>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">مانده تعهدات فعلی:</span>
+                    <strong class="text-amber-700">@Barcode.FormatCurrency(_selectedPersonnel.TotalActiveDeductions)</strong>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">وضعیت شغلی:</span>
+                    <strong class="text-blue-700">@_selectedPersonnel.JobTitle</strong>
+                </div>
+            </div>
+        }
+
+        <!-- ۲. نوع سند -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">نوع سند *</label>
+                <select class="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold" @bind="_certModel.Type">
+                    <option value="@CertificateType.Guarantee">ضمانت‌نامه بانکی</option>
+                    <option value="@CertificateType.Deduction">گواهی کسر از حقوق</option>
+                    <option value="@CertificateType.BankInquiry">پاسخ به استعلام بانکی (دو تکه)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">نام بانک عامل *</label>
+                <input type="text" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_certModel.BankName" placeholder="مثلاً: بانک ملی ایران" />
+            </div>
+        </div>
+
+        <!-- ۳. نام شعبه و موضوع تسهیلات -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">شعبه بانک *</label>
+                <input type="text" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_certModel.BranchName" placeholder="مثلاً: شعبه مرکزی ملایر" />
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">موضوع تسهیلات</label>
+                <input type="text" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_certModel.LoanSubject" placeholder="تسهیلات قرض‌الحسنه / خرید مسکن" />
+            </div>
+        </div>
+
+        <!-- ۴. نام متقاضی وام و مبلغ -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">نام وام‌گیرنده / متقاضی *</label>
+                <input type="text" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_certModel.RecipientName" placeholder="نام و نام خانوادگی متقاضی" />
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">مبلغ کل تسهیلات (ریال) *</label>
+                <input type="number" min="10000" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_certModel.LoanAmount" />
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">مبلغ هر قسط ماهانه (ریال)</label>
+                <input type="number" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs" @bind="_certModel.InstallmentAmount" />
+            </div>
+        </div>
+
+        <!-- دکمه صدور نهایی -->
+        <div class="pt-4 border-t border-slate-200 flex justify-end gap-3">
+            <button type="button" @onclick="HandleSubmit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-xs font-bold cursor-pointer shadow-xs">
+                صدور و ثبت نهایی سند اداری
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Personnel> _personnelList = new();
+    private Personnel? _selectedPersonnel;
+    private Certificate _certModel = new() { LoanAmount = 100000000, InstallmentAmount = 3000000, BankName = "بانک ملی ایران", BranchName = "ملایر" };
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _personnelList = await PersonnelService.GetAllPersonnelAsync(status: PersonnelStatus.Active);
+    }
+
+    private void OnPersonnelChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int id) && id > 0)
+        {
+            _selectedPersonnel = _personnelList.FirstOrDefault(p => p.Id == id);
+            if (_selectedPersonnel != null)
+            {
+                _certModel.PersonnelId = _selectedPersonnel.Id;
+                _certModel.RecipientName = _selectedPersonnel.FullName;
+                _certModel.RecipientNationalCode = _selectedPersonnel.NationalCode;
+            }
+        }
+        else
+        {
+            _selectedPersonnel = null;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        if (_certModel.PersonnelId == 0)
+        {
+            _errorMessage = "لطفاً ابتدا پرسنل مورد نظر را انتخاب نمایید.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_certModel.BankName))
+        {
+            _errorMessage = "وارد کردن نام بانک عامل الزامی است.";
+            return;
+        }
+
+        if (_certModel.LoanAmount < 10000)
+        {
+            _errorMessage = "مبلغ تسهیلات باید از ۱۰,۰۰۰ ریال بیشتر باشد.";
+            return;
+        }
+
+        var result = await CertService.IssueCertificateAsync(_certModel, 1);
+        if (!result.Success)
+        {
+            _errorMessage = result.Message;
+        }
+        else
+        {
+            _successMessage = $"سند با شماره دبیرخانه {result.Certificate?.CertificateNo} و کد رهگیری {result.Certificate?.TrackingCode} صادر گردید.";
+            await Task.Delay(1500);
+            Navigation.NavigateTo("certificates");
+        }
+    }
+}

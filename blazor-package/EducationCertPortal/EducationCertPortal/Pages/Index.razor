@@ -1,0 +1,71 @@
+@page "/"
+@inject ICertificateService CertService
+@inject IBarcodeService Barcode
+
+<PageTitle>پیشخوان | سامانه مدیریت آموزش و پرورش ملایر</PageTitle>
+
+<div class="space-y-6 max-w-6xl mx-auto">
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs">
+        <h2 class="text-lg font-black text-slate-800">پیشخوان آماری و وضعیت سامانه</h2>
+        <p class="text-xs text-slate-500 mt-1">سامانه صدور و استعلام برخط گواهی و ضمانت‌نامه بانکی</p>
+    </div>
+
+    <!-- کارت‌های آماری -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <span class="text-xs text-slate-500 block">کل اسناد صادر شده</span>
+            <span class="text-2xl font-black text-slate-800 mt-2 block">@Barcode.ToPersianDigits(_stats.TotalCertificates)</span>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <span class="text-xs text-emerald-600 font-bold block">ضمانت‌نامه‌های فعال</span>
+            <span class="text-2xl font-black text-emerald-700 mt-2 block">@Barcode.ToPersianDigits(_stats.ActiveGuarantees)</span>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <span class="text-xs text-blue-600 font-bold block">اسناد تسویه شده</span>
+            <span class="text-2xl font-black text-blue-700 mt-2 block">@Barcode.ToPersianDigits(_stats.SettledCount)</span>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200">
+            <span class="text-xs text-slate-500 block">مجموع تعهدات جاری</span>
+            <span class="text-base font-black text-slate-800 mt-2 block">@Barcode.FormatCurrency(_stats.TotalActiveAmount)</span>
+        </div>
+    </div>
+
+    <!-- اقدامات سریع -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a href="issue" class="bg-blue-600 text-white p-5 rounded-2xl hover:bg-blue-700 transition flex items-center justify-between">
+            <div>
+                <h3 class="font-black text-sm">صدور گواهی و ضمانت</h3>
+                <p class="text-xs text-blue-100 mt-1">تخصیص خودکار شماره دبیرخانه /۱۰۴</p>
+            </div>
+            <span class="text-2xl">✍️</span>
+        </a>
+
+        <a href="verify" class="bg-emerald-600 text-white p-5 rounded-2xl hover:bg-emerald-700 transition flex items-center justify-between">
+            <div>
+                <h3 class="font-black text-sm">استعلام و اصالت‌سنجی</h3>
+                <p class="text-xs text-emerald-100 mt-1">جستجوی کد رهگیری یا شماره ثبت</p>
+            </div>
+            <span class="text-2xl">🔍</span>
+        </a>
+
+        <a href="certificates" class="bg-slate-800 text-white p-5 rounded-2xl hover:bg-slate-900 transition flex items-center justify-between">
+            <div>
+                <h3 class="font-black text-sm">کارتابل و تسویه اسناد</h3>
+                <p class="text-xs text-slate-300 mt-1">تسویه، ابطال و چاپ دو تکه بانکی</p>
+            </div>
+            <span class="text-2xl">📑</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private (int TotalCertificates, int ActiveGuarantees, int SettledCount, decimal TotalActiveAmount) _stats;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _stats = await CertService.GetPortalStatsAsync();
+    }
+}

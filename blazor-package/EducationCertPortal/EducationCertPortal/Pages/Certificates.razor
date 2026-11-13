@@ -1,0 +1,176 @@
+@page "/certificates"
+@inject ICertificateService CertService
+@inject IBarcodeService Barcode
+@inject IJSRuntime JS
+
+<PageTitle>کارتابل اسناد و تسویه</PageTitle>
+
+<div class="space-y-6 max-w-6xl mx-auto">
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+            <h2 class="text-lg font-black text-slate-800">کارتابل اسناد، ضمانت‌نامه‌ها و تسویه</h2>
+            <p class="text-xs text-slate-500 mt-1">مدیریت وضعیت اسناد، ثبت تسویه وام و ابطال گواهی‌ها</p>
+        </div>
+
+        <a href="issue" class="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition">
+            + صدور سند جدید
+        </a>
+    </div>
+
+    <!-- فیلترها و جستجو -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row gap-3 items-center">
+        <input type="text" placeholder="جستجو بر اساس کد رهگیری، شماره دبیرخانه یا نام پرسنل..."
+               class="flex-1 p-2.5 rounded-xl border border-slate-200 text-xs w-full"
+               @bind="_searchQuery" @bind:event="oninput" @bind:after="ApplyFilter" />
+
+        <select class="p-2.5 rounded-xl border border-slate-200 text-xs font-bold w-full sm:w-auto"
+                @bind="_selectedStatus" @bind:after="ApplyFilter">
+            <option value="">همه وضعیت‌ها</option>
+            <option value="@CertificateStatus.Approved">جاری و معتبر</option>
+            <option value="@CertificateStatus.Settled">تسویه شده</option>
+            <option value="@CertificateStatus.Cancelled">ابطال شده</option>
+        </select>
+    </div>
+
+    <!-- جدول اسناد -->
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+        <div class="overflow-x-auto">
+            <table class="w-full text-right text-xs">
+                <thead class="bg-slate-50 text-slate-500 border-b border-slate-200 font-bold">
+                    <tr>
+                        <th class="p-3.5">شماره ثبت</th>
+                        <th class="p-3.5">کد رهگیری</th>
+                        <th class="p-3.5">پرسنل متعهد</th>
+                        <th class="p-3.5">نوع سند</th>
+                        <th class="p-3.5">بانک و تسهیلات</th>
+                        <th class="p-3.5">مبلغ کل وام</th>
+                        <th class="p-3.5">وضعیت</th>
+                        <th class="p-3.5 text-center">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    @if (!_filteredCerts.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-8 text-slate-400">سندی یافت نشد.</td>
+                        </tr>
+                    }
+                    @foreach (var c in _filteredCerts)
+                    {
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3.5 font-bold font-mono text-slate-800">@Barcode.ToPersianDigits(c.CertificateNo)</td>
+                            <td class="p-3.5 font-mono text-blue-700 font-bold text-[11px]">@c.TrackingCode</td>
+                            <td class="p-3.5">
+                                <strong class="text-slate-800 block">@c.Personnel?.FullName</strong>
+                                <span class="text-[10px] text-slate-400">کد: @Barcode.ToPersianDigits(c.Personnel?.PersonnelCode ?? "")</span>
+                            </td>
+                            <td class="p-3.5 font-bold">
+                                @(c.Type == CertificateType.Guarantee ? "ضمانت‌نامه" : c.Type == CertificateType.Deduction ? "کسر از حقوق" : "استعلام بانکی")
+                            </td>
+                            <td class="p-3.5">
+                                <span class="block font-bold">@c.BankName</span>
+                                <span class="text-[10px] text-slate-400">@c.BranchName</span>
+                            </td>
+                            <td class="p-3.5 font-bold">@Barcode.FormatCurrency(c.LoanAmount)</td>
+                            <td class="p-3.5">
+                                @if (c.Status == CertificateStatus.Approved)
+                                {
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">فعال و جاری</span>
+                                }
+                                else if (c.Status == CertificateStatus.Settled)
+                                {
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">تسویه شده</span>
+                                }
+                                else
+                                {
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">ابطال شده</span>
+                                }
+                            </td>
+                            <td class="p-3.5 text-center">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <a href="@(c.Type == CertificateType.BankInquiry ? $"print/twopiece/{c.Id}" : $"print/official/{c.Id}")" target="_blank"
+                                       class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-[11px]">
+                                        چاپ
+                                    </a>
+
+                                    @if (c.Status == CertificateStatus.Approved)
+                                    {
+                                        <button @onclick="() => HandleSettle(c.Id)"
+                                                class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg font-bold text-[11px] cursor-pointer">
+                                            تسویه
+                                        </button>
+
+                                        <button @onclick="() => HandleCancel(c.Id)"
+                                                class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-bold text-[11px] cursor-pointer">
+                                            ابطال
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Certificate> _certificates = new();
+    private List<Certificate> _filteredCerts = new();
+    private string _searchQuery = "";
+    private CertificateStatus? _selectedStatus;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCertificates();
+    }
+
+    private async Task LoadCertificates()
+    {
+        _certificates = await CertService.GetAllCertificatesAsync();
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        var query = _certificates.AsEnumerable();
+
+        if (_selectedStatus.HasValue)
+        {
+            query = query.Where(c => c.Status == _selectedStatus.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            var s = _searchQuery.Trim().ToLower();
+            query = query.Where(c =>
+                c.TrackingCode.ToLower().Contains(s) ||
+                c.CertificateNo.ToLower().Contains(s) ||
+                (c.Personnel != null && c.Personnel.FullName.ToLower().Contains(s))
+            );
+        }
+
+        _filteredCerts = query.ToList();
+    }
+
+    private async Task HandleSettle(int id)
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", "آیا از ثبت وضعیت تسویه برای این سند اطمینان دارید؟ (سند تسویه شده از سرجمع تعهدات پرسنل کسر خواهد شد)");
+        if (confirmed)
+        {
+            await CertService.SettleCertificateAsync(id, "کارشناس رفاه و صدور");
+            await LoadCertificates();
+        }
+    }
+
+    private async Task HandleCancel(int id)
+    {
+        string reason = await JS.InvokeAsync<string>("prompt", "علت ابطال سند را وارد فرمایید:", "عدم دریافت تسهیلات توسط متقاضی");
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            await CertService.CancelCertificateAsync(id, reason, "کارشناس رفاه و صدور");
+            await LoadCertificates();
+        }
+    }
+}

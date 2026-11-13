@@ -1,0 +1,172 @@
+@page "/print/twopiece/{Id:int}"
+@layout EmptyLayout
+@inject ICertificateService CertService
+@inject IBarcodeService Barcode
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>چاپ استعلام دو تکه افقی A4</title>
+    <style>
+        @@page {
+            size: A4 landscape;
+            margin: 8mm;
+        }
+        body {
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            background: #ffffff;
+            color: #1e293b;
+            margin: 0;
+            padding: 10px;
+            font-size: 11px;
+            direction: rtl;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            height: 100%;
+        }
+        .card {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .text-center { text-align: center; }
+        .text-justify { text-align: justify; }
+        .font-bold { font-weight: bold; }
+        .font-black { font-weight: 900; }
+        .text-xs { font-size: 10px; }
+        .text-sm { font-size: 12px; }
+        .flex { display: flex; }
+        .justify-between { justify-content: space-between; }
+        .items-center { align-items: center; }
+        .border-b { border-bottom: 1px solid #e2e8f0; }
+        .border-t { border-top: 1px solid #e2e8f0; }
+        .pb-2 { padding-bottom: 8px; }
+        .pt-2 { padding-top: 8px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mt-2 { margin-top: 8px; }
+        .no-print { @@media print { display: none !important; } }
+    </style>
+</head>
+<body>
+    @if (_cert != null)
+    {
+        <div class="no-print" style="margin-bottom: 10px; display: flex; gap: 8px;">
+            <button onclick="window.print()" style="background: #2563eb; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                🖨️ چاپ برگه (A4 دو تکه افقی)
+            </button>
+            <button onclick="window.close()" style="background: #64748b; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                بستن پنجره
+            </button>
+        </div>
+
+        <div class="container">
+            <!-- نیمه راست: نسخه بانک عامل -->
+            <div class="card">
+                <div>
+                    <div class="text-center border-b pb-2 mb-2">
+                        <div class="text-xs font-bold">باسمه تعالی</div>
+                        <div class="font-black text-sm">مدیریت آموزش و پرورش ملایر</div>
+                        <div class="text-xs">امور مالی و حسابداری</div>
+                        <div class="text-xs font-bold" style="color: #1e40af; margin-top: 4px;">پاسخ به استعلام بانکی (نسخه تحویل به بانک)</div>
+                    </div>
+
+                    <div class="flex justify-between text-xs mb-2">
+                        <div>شماره دبیرخانه: <strong style="font-family: monospace;">@Barcode.ToPersianDigits(_cert.CertificateNo)</strong></div>
+                        <div>تاریخ صدور: <span>@Barcode.ToPersianDate(_cert.ApprovedAt ?? _cert.CreatedAt)</span></div>
+                        <div>پیوست: <strong>ندارد</strong></div>
+                    </div>
+
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-family: monospace; font-size: 10px;">کد رهگیری: <strong style="color: #1d4ed8;">@_cert.TrackingCode</strong></div>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <div>@((MarkupString)Barcode.GenerateCode128Svg(_cert.TrackingCode, 26, 120))</div>
+                            <div>@((MarkupString)Barcode.GenerateQrCodeSvg(Navigation.BaseUri + "verify?code=" + _cert.TrackingCode, 28))</div>
+                        </div>
+                    </div>
+
+                    <div class="text-justify" style="line-height: 1.8; font-size: 11px;">
+                        ریاست محترم @_cert.BankName - @_cert.BranchName<br />
+                        سلام علیکم؛<br />
+                        احتراماً عطف به استعلام شماره تسهیلات درخواستی متقاضی محترم <strong>@_cert.RecipientName</strong>، بدین‌وسیله گواهی می‌گردد همکار گرامی <strong>@_cert.Personnel?.FullName</strong> فرزند @_cert.Personnel?.FatherName با کد ملی @_cert.Personnel?.NationalCode و شماره پرسنلی @_cert.Personnel?.PersonnelCode به عنوان @_cert.Personnel?.JobTitle در این مدیریت شاغل بوده و آخرین خالص دریافتی ماهانه ایشان برابر با <strong>@Barcode.FormatCurrency(_cert.Personnel?.NetIncome ?? 0)</strong> می‌باشد. صدور این استعلام تا سقف مبلغ <strong>@Barcode.FormatCurrency(_cert.LoanAmount)</strong> بلامانع است.
+                    </div>
+                </div>
+
+                <div class="border-t pt-2 text-center" style="font-size: 10px;">
+                    <div class="font-bold">معاون مدیر کل و مدیر اداره</div>
+                    <div style="color: #64748b;">مدیریت آموزش و پرورش ملایر</div>
+                    <div style="display: flex; justify-content: space-between; font-size: 8px; color: #94a3b8; margin-top: 10px;">
+                        <span>اپراتور: @_cert.OperatorName</span>
+                        <span>اعتبار با مهر و امضای رسمی اداره</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- نیمه چپ: نسخه بایگانی اداره -->
+            <div class="card">
+                <div>
+                    <div class="text-center border-b pb-2 mb-2">
+                        <div class="text-xs font-bold">باسمه تعالی</div>
+                        <div class="font-black text-sm">مدیریت آموزش و پرورش ملایر</div>
+                        <div class="text-xs">امور مالی و حسابداری</div>
+                        <div class="text-xs font-bold" style="color: #065f46; margin-top: 4px;">پاسخ به استعلام بانکی (نسخه بایگانی پرونده اداره)</div>
+                    </div>
+
+                    <div class="flex justify-between text-xs mb-2">
+                        <div>شماره دبیرخانه: <strong style="font-family: monospace;">@Barcode.ToPersianDigits(_cert.CertificateNo)</strong></div>
+                        <div>تاریخ صدور: <span>@Barcode.ToPersianDate(_cert.ApprovedAt ?? _cert.CreatedAt)</span></div>
+                        <div>پیوست: <strong>ندارد</strong></div>
+                    </div>
+
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-family: monospace; font-size: 10px;">کد رهگیری: <strong style="color: #1d4ed8;">@_cert.TrackingCode</strong></div>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <div>@((MarkupString)Barcode.GenerateCode128Svg(_cert.TrackingCode, 26, 120))</div>
+                            <div>@((MarkupString)Barcode.GenerateQrCodeSvg(Navigation.BaseUri + "verify?code=" + _cert.TrackingCode, 28))</div>
+                        </div>
+                    </div>
+
+                    <div class="text-justify" style="line-height: 1.8; font-size: 11px;">
+                        ریاست محترم @_cert.BankName - @_cert.BranchName<br />
+                        سلام علیکم؛<br />
+                        احتراماً عطف به استعلام شماره تسهیلات درخواستی متقاضی محترم <strong>@_cert.RecipientName</strong>، بدین‌وسیله گواهی می‌گردد همکار گرامی <strong>@_cert.Personnel?.FullName</strong> فرزند @_cert.Personnel?.FatherName با کد ملی @_cert.Personnel?.NationalCode و شماره پرسنلی @_cert.Personnel?.PersonnelCode به عنوان @_cert.Personnel?.JobTitle در این مدیریت شاغل بوده و آخرین خالص دریافتی ماهانه ایشان برابر با <strong>@Barcode.FormatCurrency(_cert.Personnel?.NetIncome ?? 0)</strong> می‌باشد. صدور این استعلام تا سقف مبلغ <strong>@Barcode.FormatCurrency(_cert.LoanAmount)</strong> بلامانع است.
+                    </div>
+                </div>
+
+                <div class="border-t pt-2 text-center" style="font-size: 10px;">
+                    <div class="font-bold">معاون مدیر کل و مدیر اداره</div>
+                    <div style="color: #64748b;">مدیریت آموزش و پرورش ملایر</div>
+                    <div style="display: flex; justify-content: space-between; font-size: 8px; color: #94a3b8; margin-top: 10px;">
+                        <span>اپراتور: @_cert.OperatorName</span>
+                        <span>نسخه بایگانی در پرونده پرسنلی</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</body>
+</html>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Certificate? _cert;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _cert = await CertService.GetCertificateByIdAsync(Id);
+    }
+}

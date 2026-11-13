@@ -1,0 +1,30 @@
+@page "/"
+@namespace EducationCertPortal.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>سامانه صدور و استعلام گواهی و ضمانت‌نامه - مدیریت آموزش و پرورش ملایر</title>
+    <base href="~/" />
+    <link href="css/app.css" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <component type="typeof(Microsoft.AspNetCore.Components.Web.HeadOutlet)" render-mode="ServerPrerendered" />
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-blue-600 selection:text-white">
+    <component type="typeof(App)" render-mode="ServerPrerendered" />
+
+    <div id="blazor-error-ui" class="hidden fixed bottom-4 right-4 bg-rose-600 text-white px-4 py-2 rounded-xl text-xs z-50">
+        خطایی رخ داده است.
+        <a href="" class="reload font-bold underline mr-2">بارگذاری مجدد</a>
+    </div>
+
+    <script src="_framework/blazor.server.js"></script>
+    <script src="js/site.js"></script>
+</body>
+</html>

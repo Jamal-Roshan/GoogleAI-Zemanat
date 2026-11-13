@@ -1,0 +1,6 @@
+{
+  "name": "سامانه صدور گواهی و ضمانت‌نامه",
+  "description": "سامانه جامع سازمانی صدور گواهی کسر از حقوق، ضمانت‌نامه بانکی، استعلام و مدیریت پرسنل",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
